@@ -7,12 +7,12 @@ var Bullet = function (game, key) {
   this.texture.baseTexture.scaleMode = PIXI.scaleModes.NEAREST;
 
   this.anchor.set(0.5);
-
+  // 是否开启边界检测
   this.checkWorldBounds = true;
   // 离开边界自动kill
   this.outOfBoundsKill = true;
   this.exists = false;
-
+  // 跟踪
   this.tracking = false;
   this.scaleSpeed = 0;
 
@@ -51,7 +51,7 @@ Bullet.prototype.update = function () {
 
 };
 
-Game.Bullet = Bullet;
+// Game.Bullet = Bullet;
 
 Game.prototype = {
 
@@ -100,16 +100,31 @@ Game.prototype = {
   },
 
   enemy: function () {
-    for(var i=0; i<5; i++){
-        // 敌机初始设置
-        var enemy = this.add.sprite(game.width, 20 + i * 120, 'enemy');
-        enemy.anchor.set(0.5);
-        enemy.scale.setTo(0.5);
-        this.physics.arcade.enable(enemy);
-        enemy.body.collideWorldBounds = true;
-        // this.enemy.rotation = 1.5*Math.PI;
-        this.enemies.push(enemy);
-    }
+    // for(var i=0; i<5; i++){
+    //     // 敌机初始设置
+    //     var enemy = this.add.sprite(game.width, 20 + i * 120, 'enemy');
+    //     enemy.anchor.set(0.5);
+    //     enemy.scale.setTo(0.5);
+    //     this.physics.arcade.enable(enemy);
+    //     enemy.body.collideWorldBounds = true;
+    //     // this.enemy.rotation = 1.5*Math.PI;
+    //     this.enemies.push(enemy);
+    // }
+    // 因为敌机都是相类似的，所以设置一个组，统一管理
+    var enemies = game.add.group();
+    // 首先需要将贴图看做的物体，才能够移动等。。。
+    enemies.enableBody = true;
+    // 使用ARCADE的物理引擎
+    enemies.physicsBodyType = Phaser.Physics.ARCADE;
+    // Enemies组里添加20个敌机的贴图到舞台上，但是他们是不可见也不能和其他物体作用，只是为了之后的使用
+    // 屏幕中最多只能够有20个敌机同时存在，当超出边界，便会被清除以待重新设置使用
+    enemies.createMultiple(20, 'enemy');
+
+    lasers.callAll('events.onOutOfBounds.add', 'events.onOutOfBounds', resetEnemy);
+    // 将敌机的锚点位置放在中心末尾处
+    enemies.callAll('anchor.setTo', 'anchor', 0.5, 1.0);
+    // 将所有的Enemies内的物体设置边界检测
+    enemies.setAll('checkWorldBounds', true);
   },
 
   create: function () {
@@ -220,7 +235,8 @@ Game.prototype = {
     this.enemies.forEach(function (enemy, i) {
         // 控制飞机往左移动
         // x的值不能小于0
-        enemy.body.x -= 2; 
+        // enemy.body.x -= 2; 
+        enemy.velocity.x = -200;
         // 飞机移动到屏幕左侧消失
         if(enemy.body.x <= 0) {
             enemy.kill();
