@@ -80,7 +80,10 @@ Game.prototype = {
     this.bullets = [];
 
     // 敌机刷新速率
-    this.refreshTime = 0;
+    // 设置初值是为了第一次的判定不刷新飞机
+    // 而为什么是两倍的间隔时间，这个是因为game.time.now()的初始值，莫名的就是2000多了
+    // 不太清楚为什么
+    this.refreshTime = 6000;
   },
 
   preload: function () {
@@ -90,8 +93,7 @@ Game.prototype = {
     // 加载文字，显示说明
     this.load.bitmapFont('shmupfont', 'assets/assets/shmupfont.png', 'assets/assets/shmupfont.xml');
     // 加载不同种类武器
-    for (var i = 1; i <= 11; i++)
-    {
+    for (var i = 1; i <= 11; i++){
         this.load.image('bullet' + i, 'assets/assets/bullet' + i + '.png');
     }
 
@@ -100,16 +102,28 @@ Game.prototype = {
   },
 
   enemy: function () {
+    // 接下来就是不断设置不同的敌机的出现方式和不同的机型
+
+    // 方式1
     for(var i=0; i<5; i++){
         // 敌机初始设置
         var enemy = this.add.sprite(game.width, 20 + i * 120, 'enemy');
+        // 锚点设置于中心位置
         enemy.anchor.set(0.5);
+        // 等比缩小
         enemy.scale.setTo(0.5);
         this.physics.arcade.enable(enemy);
-        enemy.body.collideWorldBounds = true;
-        // this.enemy.rotation = 1.5*Math.PI;
+
+        // 对于sprite的图形旋转
+        enemy.rotation = 1.5*Math.PI;
+        // 水平方向的速度
+        enemy.body.velocity.x = -200;
         this.enemies.push(enemy);
     }
+
+    // 方式。。。。
+
+
     // // 因为敌机都是相类似的，所以设置一个组，统一管理
     // var enemies = game.add.group();
     // // 首先需要将贴图看做的物体，才能够移动等。。。
@@ -148,6 +162,8 @@ Game.prototype = {
       this.weapons.push(new Weapon.Combo2(game));
 
       this.currentWeapon = 0;
+      // 设置初始化的子弹种类
+      this.bullets = this.weapons[this.currentWeapon].children;
 
       for (var i = 1; i < this.weapons.length; i++)
       {
@@ -160,7 +176,6 @@ Game.prototype = {
 
       // 敌机
       this.enemy();
-      // this.enemy.autoScroll(-40, 0);
 
       // 添加前景图片
       // this.foreground = this.add.tileSprite(0, 0, this.game.width, this.game.height, 'foreground');
@@ -181,6 +196,9 @@ Game.prototype = {
 
   nextWeapon: function () {
 
+    // 将bullets数组清空，换成别的类型的子弹
+    this.bullets = [];
+
     //  Tidy-up the current weapon
     if (this.currentWeapon > 9){
         this.weapons[this.currentWeapon].reset();
@@ -195,10 +213,12 @@ Game.prototype = {
 
     if (this.currentWeapon === this.weapons.length){
         this.currentWeapon = 0;
-        this.game.state.start('GameOver');
+        this.bullets = this.weapons[0].children;
     }
 
     this.weapons[this.currentWeapon].visible = true;
+    // 切换子弹类型
+    this.bullets = this.weapons[this.currentWeapon].children;
 
     this.weaponName.text = this.weapons[this.currentWeapon].name;
 
@@ -233,10 +253,6 @@ Game.prototype = {
     }
 
     this.enemies.forEach(function (enemy, i) {
-        // 控制飞机往左移动
-        // x的值不能小于0
-        // enemy.body.x -= 2; 
-        enemy.body.velocity.x = -200;
         // 飞机移动到屏幕左侧消失
         if(enemy.body.x <= 0) {
             enemy.kill();
@@ -252,6 +268,7 @@ Game.prototype = {
     // game.time.now和game.time.time在update中的递增规律不是加1ms
     // 而是16.6666ms，这个和update()刷新的频率有关，
     // game.time.now不可以被赋值
+    // console.log(game.time.now);
     if(game.time.now > this.refreshTime) {
         this.refreshTime = 3000 + game.time.now + Math.random() * 1000;
         this.enemy();
@@ -259,26 +276,19 @@ Game.prototype = {
 
     this.player.body.velocity.set(0);
 
-    if (this.cursors.left.isDown)
-    {
+    if (this.cursors.left.isDown){
         this.player.body.velocity.x = -this.speed;
-    }
-    else if (this.cursors.right.isDown)
-    {
+    } else if (this.cursors.right.isDown){
         this.player.body.velocity.x = this.speed;
     }
 
-    if (this.cursors.up.isDown)
-    {
+    if (this.cursors.up.isDown){
         this.player.body.velocity.y = -this.speed;
-    }
-    else if (this.cursors.down.isDown)
-    {
+    } else if (this.cursors.down.isDown){
         this.player.body.velocity.y = this.speed;
     }
 
-    if (this.input.keyboard.isDown(Phaser.Keyboard.SPACEBAR))
-    {
+    if (this.input.keyboard.isDown(Phaser.Keyboard.SPACEBAR)){
         this.weapons[this.currentWeapon].fire(this.player);
     }
   }
@@ -300,13 +310,10 @@ Weapon.SingleBullet = function (game) {
     this.bulletSpeed = 600;
     this.fireRate = 100;
 
-    for (var i = 0; i < 64; i++)
-    {
+    for (var i = 0; i < 64; i++){
         var bullet = this.add(new Bullet(game, 'bullet5'), true);
-        // 将bullet存入数组
-        game.state.states.Game.bullets.push(bullet);
     }
-    // this.bullets = this.children;
+
     return this;
 };
 
@@ -338,8 +345,7 @@ Weapon.FrontAndBack = function (game) {
     this.bulletSpeed = 600;
     this.fireRate = 100;
 
-    for (var i = 0; i < 64; i++)
-    {
+    for (var i = 0; i < 64; i++) {
         this.add(new Bullet(game, 'bullet5'), true);
     }
 
@@ -376,8 +382,7 @@ Weapon.ThreeWay = function (game) {
     this.bulletSpeed = 600;
     this.fireRate = 100;
 
-    for (var i = 0; i < 96; i++)
-    {
+    for (var i = 0; i < 96; i++){
         this.add(new Bullet(game, 'bullet7'), true);
     }
 
@@ -415,8 +420,7 @@ Weapon.EightWay = function (game) {
     this.bulletSpeed = 600;
     this.fireRate = 100;
 
-    for (var i = 0; i < 96; i++)
-    {
+    for (var i = 0; i < 96; i++){
         this.add(new Bullet(game, 'bullet5'), true);
     }
 
@@ -459,8 +463,7 @@ Weapon.ScatterShot = function (game) {
     this.bulletSpeed = 600;
     this.fireRate = 40;
 
-    for (var i = 0; i < 32; i++)
-    {
+    for (var i = 0; i < 32; i++){
         this.add(new Bullet(game, 'bullet5'), true);
     }
 
@@ -496,8 +499,7 @@ Weapon.Beam = function (game) {
     this.bulletSpeed = 1000;
     this.fireRate = 45;
 
-    for (var i = 0; i < 64; i++)
-    {
+    for (var i = 0; i < 64; i++){
         this.add(new Bullet(game, 'bullet11'), true);
     }
 
@@ -533,8 +535,10 @@ Weapon.SplitShot = function (game) {
     this.bulletSpeed = 700;
     this.fireRate = 40;
 
-    for (var i = 0; i < 64; i++)
-    {
+    // 开始设置的64个，但是在运行发生了报错
+    // 我估计是在同屏幕显示时，超出了64个的上限而导致的
+    // 然后调整为96个，果然没有报错了
+    for (var i = 0; i < 96; i++){
         this.add(new Bullet(game, 'bullet8'), true);
     }
 
@@ -577,8 +581,7 @@ Weapon.Pattern = function (game) {
 
     this.patternIndex = 0;
 
-    for (var i = 0; i < 64; i++)
-    {
+    for (var i = 0; i < 64; i++){
         this.add(new Bullet(game, 'bullet4'), true);
     }
 
@@ -600,8 +603,7 @@ Weapon.Pattern.prototype.fire = function (source) {
 
     this.patternIndex++;
 
-    if (this.patternIndex === this.pattern.length)
-    {
+    if (this.patternIndex === this.pattern.length){
         this.patternIndex = 0;
     }
 
@@ -621,8 +623,7 @@ Weapon.Rockets = function (game) {
     this.bulletSpeed = 400;
     this.fireRate = 250;
 
-    for (var i = 0; i < 32; i++)
-    {
+    for (var i = 0; i < 32; i++){
         this.add(new Bullet(game, 'bullet10'), true);
     }
 
@@ -661,8 +662,7 @@ Weapon.ScaleBullet = function (game) {
     this.bulletSpeed = 800;
     this.fireRate = 100;
 
-    for (var i = 0; i < 32; i++)
-    {
+    for (var i = 0; i < 32; i++){
         this.add(new Bullet(game, 'bullet9'), true);
     }
     // 设置放大的速率
